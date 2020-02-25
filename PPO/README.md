@@ -1,7 +1,7 @@
 ## Keras implementation of PPO agorithm
 Designed for gfootball enviroment
 
-#Acknowledgements
+# Acknowledgements
 * [PPO Keras](https://github.com/LuEE-C/PPO-Keras)
 * [PPO PyTorch](https://github.com/colinskow/move37/tree/master/ppo)
 * [RL Bot Football](https://github.com/ChintanTrivedi/rl-bot-football)
