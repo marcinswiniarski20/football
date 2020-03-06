@@ -13,11 +13,11 @@ from PPO.helpers import get_advantages, get_action_occurance_in_ppo_step, print_
 
 import tensorflow as tf
 
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
-sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+# gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+# sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
-env = football_env.create_environment(env_name="11_vs_11_easy_stochastic", stacked=True,
-                                      logdir='/tmp/fooacademy_3_vs_3tball', rewards='scoring,checkpoint',
+env = football_env.create_environment(env_name="academy_single_goal_versus_lazy", stacked=True,
+                                      logdir='/tmp/fooacademy_3_vs_3tball', rewards='scoring',
                                       write_goal_dumps=False, write_full_episode_dumps=False, render=False)
 
 state = env.reset() / 255.
@@ -28,10 +28,10 @@ dummy_n = np.zeros((1, 1, n_actions))
 dummy_1 = np.zeros((1, 1, 1))
 
 agent = PPOAgent(num_actions=n_actions, input_dim=state_dims)
-#agent.load(FOLDER_NAME, "1100_-0.001_-16.hdf5") # used for loading weights
+agent.load(FOLDER_NAME, "best.hdf5") # used for loading weights
 reward_wrapper = RewardWrapper(env.unwrapped.observation()[0])
 max_iters = 500_000
-iters = 1
+iters = 96001
 
 total_enemy_goals = 0
 total_your_goals = 0
@@ -40,7 +40,7 @@ last_rewards = []
 iter_goals = 0
 best_reward = 0
 
-steps = 0
+steps = 128*iters
 
 losses = pd.DataFrame(columns=['actor_loss', 'critic_loss', 'sum_128_reward', 'goals'])
 
@@ -51,12 +51,25 @@ while iters < max_iters:
 
     for itr in range(PPO_STEPS):
         action_dist = agent.actor.predict([np.array([state]), dummy_n, dummy_1, dummy_1, dummy_1], steps=1)
+        # print(action_dist)
         q_value = agent.critic.predict([np.array([state])], steps=1)
-        action = np.random.choice(n_actions, p=action_dist[0,:])
+        if random.random() > EXPLORATION:
+            action = np.random.choice(n_actions, p=action_dist[0,:])
+
+            # swaping last two actions in my best model
+            if action == 18:
+                action = 17
+            if action == 17:
+                action = 18
+        else:
+            action = random.randint(0, n_actions - 1)
+            print(f"random action {action}")
+
+
         action_onehot = np.zeros(n_actions)
         action_onehot[action] = 1
 
-        # time.sleep(0.07) # if you want to see them playing but it's too damn fast
+        # time.sleep(0.02) # if you want to see them playing but it's too damn fast
 
         observation, reward, done, info = env.step(action)
 
@@ -100,9 +113,9 @@ while iters < max_iters:
     actor_loss = agent.actor.fit([np.array(states), np.array(actions_probs), np.array(advantages),
                                   np.reshape(np.array(rewards), newshape=(-1, 1, 1)), np.array(values[:-1])],
                                  [(np.reshape(np.array(actions_onehot), newshape=(-1, n_actions)))], verbose=0,
-                                 shuffle=True, epochs=NSTEPS)
+                                 shuffle=True, epochs=FIT_EPOCHES)
     critic_loss = agent.critic.fit(np.array(states), [np.reshape(returns, newshape=(-1, 1))], shuffle=True,
-                                   epochs=NSTEPS,
+                                   epochs=FIT_EPOCHES,
                                    verbose=0)
 
     print_in_console(iters, critic_loss.history['loss'][7], actor_loss.history['loss'][7], actions_choosen,
@@ -113,7 +126,7 @@ while iters < max_iters:
     iter_goals = 0
 
     if iters % 100 == 0:
-        avg_reward = round(np.average(np.array(last_rewards)), 3)
+        avg_reward = round(np.average(np.array(last_rewards)), 4)
         if not os.path.isfile(f'models/{FOLDER_NAME}/losses.csv'):
             losses.to_csv(f'models/{FOLDER_NAME}/losses.csv', float_format='%.4f')
         else:

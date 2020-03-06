@@ -33,7 +33,6 @@ def get_action_occurance_in_ppo_step(n_actions, actions):
 def print_in_console(iters, critic_loss, actor_loss, actions_choosen, time_elapsed,
                      num_of_steps, reward, your_goals, enemy_goals):
 
-    print("––––––––––––––––––––––––––––––")
     print(f"=========== {iters} ===========")
     print(f"          {your_goals} : {enemy_goals} ")
     print(f"time elapsed: {round(time_elapsed,1)}s")

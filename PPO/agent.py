@@ -33,7 +33,8 @@ class PPOAgent:
         self.num_actions = num_actions
         self.input_dim = input_dim
 
-        self.image_preprocessor, self.image_preprocessor_input = self.buid_image_preprocessor()
+        self.image_preprocessor, self.image_preprocessor_input = self.build_nature_image_preprocessor()
+        # self.image_preprocessor, self.image_preprocessor_input = self.buid_image_preprocessor()
         self.critic = self.build_critic()
         self.actor = self.build_actor()
 
@@ -48,6 +49,14 @@ class PPOAgent:
         x = Add()([input_layer, x_shortcut])
         return x
 
+    def build_nature_image_preprocessor(self):
+        preprocessor_input = Input(shape=self.input_dim)
+        x = Conv2D(kernel_size=8, strides=4, activation="relu", filters=32, padding='valid', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(preprocessor_input)
+        x = Conv2D(kernel_size=4, strides=2, activation="relu", filters=64, padding='valid', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(x)
+        x = Conv2D(kernel_size=3, strides=1, activation="relu", filters=64, padding='valid', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(x)
+
+        return x, preprocessor_input
+
     def buid_image_preprocessor(self):
         """ Creates shared layer between actor and critic. It's purpose is to transform image information to latent space
 
@@ -56,16 +65,16 @@ class PPOAgent:
                 preprocessor_input: input layer
         """
         preprocessor_input = Input(shape=self.input_dim)
-        x = Conv2D(kernel_size=(3, 3), strides=1, filters=32, padding='same', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(preprocessor_input)
+        x = Conv2D(kernel_size=(3, 3), strides=1, filters=16, padding='same', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(preprocessor_input)
         x = MaxPooling2D(pool_size=(3, 3), strides=2)(x)
-        x = self.build_residual(x, 32)
-        x = self.build_residual(x, 32)
+        x = self.build_residual(x, 16)
+        x = self.build_residual(x, 16)
 
         for _ in range(3):
-            x = Conv2D(kernel_size=(3, 3), strides=1, filters=64, padding='same', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(x)
+            x = Conv2D(kernel_size=(3, 3), strides=1, filters=32, padding='same', kernel_initializer=RandomNormal(mean=0.0, stddev=0.01))(x)
             x = MaxPooling2D(pool_size=(3, 3), strides=2)(x)
-            x = self.build_residual(x, 64)
-            x = self.build_residual(x, 64)
+            x = self.build_residual(x, 32)
+            x = self.build_residual(x, 32)
 
         x = Activation('relu')(x)
         return x, preprocessor_input
